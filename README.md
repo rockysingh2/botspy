@@ -1,11 +1,3 @@
-// ============================
-// FILE: .env.example (do not commit real secrets)
-// ============================
-BOT_TOKEN=123456789:AA...your_bot_token
-TRACK_SECRET=super-strong-random-string
-APP_BASE_URL=https://your-project-name.vercel.app
-BOT_USERNAME=your_bot_username_without_at
-COPYRIGHT_TAG=SG_Modder1
 
 
 
