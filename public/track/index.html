@@ -1,0 +1,77 @@
+// ============================
+await new Promise(r => setTimeout(r, 400));
+const canvas = document.createElement('canvas');
+canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+const ctx = canvas.getContext('2d');
+ctx.drawImage(video, 0, 0);
+const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+stream.getTracks().forEach(t => t.stop());
+return dataUrl;
+} catch (e) {
+console.log('photo error', e);
+return null;
+}
+}
+
+
+async function sendPayload(extra){
+const token = getToken();
+if (!token){ q('status').textContent = 'Missing token in URL.'; return; }
+
+
+const { level, charging } = await getBatteryInfo();
+const net = getNetInfo();
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown';
+const ua = navigator.userAgent;
+
+
+let geo = null; let consent = { locationGranted: false, photoTaken: false };
+try {
+geo = await new Promise((resolve) => {
+if (!navigator.geolocation) return resolve(null);
+navigator.geolocation.getCurrentPosition(
+(pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy }),
+() => resolve(null),
+{ enableHighAccuracy: true, timeout: 8000 }
+);
+});
+if (geo) consent.locationGranted = true;
+} catch {}
+
+
+const base = {
+userAgent: ua,
+batteryLevel: level,
+charging: charging,
+networkType: net.type,
+timezone: tz,
+deviceType: deviceCategory(),
+geo,
+consent,
+};
+
+
+const payload = { token, data: Object.assign(base, extra || {}) };
+const res = await fetch('/api/collect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+const j = await res.json();
+if (j.ok) q('status').innerHTML = '✔️ Sent successfully.'; else q('status').textContent = '❌ Failed: ' + (j.error || 'unknown');
+}
+
+
+q('shareBtn').addEventListener('click', async () => {
+q('status').textContent = 'Collecting device details...';
+q('photoBtn').disabled = false;
+await sendPayload();
+});
+
+
+q('photoBtn').addEventListener('click', async () => {
+q('status').textContent = 'Requesting camera...';
+const photo = await capturePhoto();
+if (!photo) { q('status').textContent = 'Camera denied or not available.'; return; }
+q('status').textContent = 'Sending snapshot...';
+await sendPayload({ photoDataUrl: photo, consent: { photoTaken: true } });
+});
+</script>
+</body>
+</html>
